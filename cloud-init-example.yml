@@ -1,0 +1,104 @@
+#cloud-config
+# create the docker group
+groups:
+  - docker
+
+users:
+  - name: user
+    groups: users, www-data , admin , docker , sudo
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh-authorized-keys:
+      - {key}
+  - name: webdev
+      groups: users, www-data , admin , docker
+      shell: /bin/bash
+      ssh-authorized-keys:
+        - {key}
+
+
+package_update: true
+package_upgrade: true
+packages:
+  - apt-transport-https
+  - lsb-release
+  - ca-certificates
+  - curl
+  - gnupg2
+  - software-properties-common
+  - pv
+  - python-pip
+  # - nginx
+  - zip
+  - unzip
+  - less
+  - git
+  - nano
+  - tmux
+  - htop
+  - certbot
+  - rsyslog
+  - iptables-persistent
+
+runcmd:
+  - cd /tmp
+  #PHP 7
+  # - add-apt-repository ppa:ondrej/php
+  # - apt-get -y update
+  # - apt-get install -f -y
+  # - apt-get -f -y install php php7.4-cli php7.4-fpm php7.4-bcmath php7.4-bz2 php7.4-curl php7.4-gd php7.4-intl php7.4-json php7.4-xml php7.4-zip php7.4-mysql php7.4-mbstring
+  #PHP 7
+  #DOCKER
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  - apt-get -f -y install docker-ce docker-ce-cli containerd.io
+  #DOCKER
+  #IPTABLES FREE PORTS
+  - iptables -I INPUT -p tcp --dport 80 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+  - iptables -I INPUT -p tcp --dport 443 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+  - iptables -I OUTPUT -p tcp --sport 80 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+  - iptables -I OUTPUT -p tcp --sport 443 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+  # #RABBITMQ FREE PORTS
+  # - iptables -I INPUT -p tcp --dport 4369 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+  # - iptables -I INPUT -p tcp --dport 5672 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+  # - iptables -I INPUT -p tcp --dport 15672 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+  # - iptables -I OUTPUT -p tcp --sport 4369 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+  # - iptables -I OUTPUT -p tcp --sport 5672 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+  # - iptables -I OUTPUT -p tcp --sport 15672 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+  #RABBITMQ FREE PORTS
+  #IPTABLES FREE PORTS
+  # - /sbin/iptables-save
+  - cp /etc/iptables/rules.v4 /etc/iptables/rules.v4.bk
+  - iptables-save > /etc/iptables/rules.v4
+  # config de PHP
+  # - sed -i -e '/^#PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config
+  # - sed -i -e '/^#PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config
+  # - sed -i -e '/^#X11Forwarding/s/^.*$/X11Forwarding no/' /etc/ssh/sshd_config
+  # - sed -i.bak "s/short_open_tag = Off/short_open_tag = On/g" /etc/php/7.4/fpm/php.ini
+  # - sed -i.bak "s/error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT/error_reporting = E_ALL/g" /etc/php/7.4/fpm/php.ini
+  # - sed -i.bak "s/display_errors = Off/display_errors = On/g" /etc/php/7.4/fpm/php.ini
+  # - sed -i.bak "s/display_startup_errors = Off/display_startup_errors = On/g" /etc/php/7.4/fpm/php.ini
+  # - sed -i.bak "s/html_errors = On/html_errors = Off/g" /etc/php/7.4/fpm/php.ini
+  # - sed -i.bak "s/fastcgi_param.*SERVER_NAME.*\$server_name;/fastcgi_param    SERVER_NAME    \$host;/g" /etc/nginx/fastcgi_params
+  # config de PHP
+  #Restart services
+  # - systemctl restart php7.4-fpm
+  # - systemctl restart nginx
+  #DOCKER-CONFIG
+  - curl -L "https://github.com/docker/compose/releases/download/1.25.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+  - chmod +x /usr/local/bin/docker-compose
+  #DOCKER-CONFIG
+  #Create install composer
+  # - php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+  # - php -r "if (hash_file('SHA384', 'composer-setup.php') === rtrim(file_get_contents('https://composer.github.io/installer.sig'))) { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+  # - php /tmp/composer-setup.php --install-dir=/bin --filename=composer
+  #Create install composer
+  #OpenSSL
+  - openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+  #OpenSSL
+  - mkdir /var/deploys
+  - chown -Rf webdev:webdev /home/webdev
+  - chown -Rf webdev:webdev /var/www
+  - chown -Rf webdev:webdev /var/deploys
+  - apt-get clean
+  - apt-get auto-clean
